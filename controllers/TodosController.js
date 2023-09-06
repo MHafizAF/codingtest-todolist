@@ -6,15 +6,15 @@ const validation_result = validationResult.withDefaults({
   formatter: (error) => error.msg,
 });
 
-const set_activity = async (id) => {
+const set_todo = async (id) => {
   try {
-    return await db.execute(`SELECT * FROM activities WHERE id=${id}`);
+    return await db.execute(`SELECT * FROM todos WHERE id=${id}`);
   } catch (error) {
     console.log(error);
   }
 };
 
-class ActivitiesController {
+class TodosController {
 
   static validation = (req, res, next) => {
     const errors = validation_result(req).mapped();
@@ -30,19 +30,19 @@ class ActivitiesController {
   };
 
   static create = async (req, res, next) => {
-    const { title, email } = matchedData(req);
+    const { activity_group_id, title, priority } = matchedData(req);
 
     try {
       const [result] = await db.execute(
-        "INSERT INTO `activities` (`title`, `email`) VALUES (?, ?)",
-        [title, email]
+        "INSERT INTO `todos` (`activity_group_id`, `title`, `priority`) VALUES (?, ?, ?)",
+        [activity_group_id, title, priority]
       );
-      const activity = await set_activity(result.insertId);
+      const todo = await set_todo(result.insertId);
 
       res.status(201).json({
         status: "Success",
         message: "Data saved successfully",
-        data: activity[0]
+        data: todo[0]
       });
     } catch (error) {
       next(error);
@@ -51,12 +51,12 @@ class ActivitiesController {
 
   static getAll = async (req, res, next) => {
     try {
-      const [activities] = await db.query("SELECT * FROM activities");
+      const [todos] = await db.query("SELECT * FROM todos");
 
       res.status(200).json({
         status: "Success",
         message: "Success",
-        data: activities,
+        data: todos,
       });
     } catch (error) {
       next(error);
@@ -67,19 +67,19 @@ class ActivitiesController {
     const id = req.params.id;
 
     try {
-      const [activity] = await db.query(`SELECT * FROM activities WHERE id=${id}`);
+      const [todo] = await db.query(`SELECT * FROM todos WHERE id=${id}`);
 
-      if (activity.length === 0 && id) {
+      if (todo.length === 0 && id) {
         return res.status(404).json({
           status: "Not Found",
-          message: `Activity with ID ${id} Not Found`
+          message: `Todo with ID ${id} Not Found`
         });
       }
 
       res.status(200).json({
         status: "Success",
         message: "Success",
-        data: activity[0],
+        data: todo[0],
       });
     } catch (error) {
       next(error);
@@ -90,29 +90,30 @@ class ActivitiesController {
     try {
       const id   = req.params.id;
       const data = matchedData(req);
-      const [activities] = await db.query("SELECT * FROM `activities` WHERE `id`=?", [id]);
+      const [todos] = await db.query("SELECT * FROM `todos` WHERE `id`=?", [id]);
 
-      if (activities.length !== 1) {
+      if (todos.length !== 1) {
         return res.status(404).json({
           status: "Not Found",
-          message: `Activity with ID ${id} Not Found`   
+          message: `Todo with ID ${id} Not Found`   
         })
       }
 
-      const activity = activities[0];
-      const date     = moment().format('YYYY-MM-DD hh:mm:ss')
-      const title    = data.title || activity.title;
-      const email    = data.email || activity.email;
+      const todo              = todos[0];
+      const date              = moment().format('YYYY-MM-DD hh:mm:ss')
+      const activity_group_id = data.activity_group_id || todo.activity_group_id;
+      const title             = data.title || todo.title;
+      const priority          = data.priority || todo.priority;
 
       const result = await db.execute(
-        "UPDATE `activities` SET `title`=?, `email`=?, `updated_at`=? WHERE `id`=?",
-        [title, email, date, id]
+        "UPDATE `todos` SET `activity_group_id`=?, `title`=?, `priority`=?, `updated_at`=? WHERE `id`=?",
+        [activity_group_id, title, priority, date, id]
       );
-      const updated_value = await set_activity(id);
+      const updated_value = await set_todo(id);
 
       res.status(200).json({
         status: "Success",
-        message: "Activities updated successfully",
+        message: "Todo updated successfully",
         data: updated_value[0]
       });
     } catch (error) {
@@ -125,7 +126,7 @@ class ActivitiesController {
       const id = req.params.id;
 
       const [ result ] = await db.execute(
-        "DELETE FROM `activities` WHERE `id`=?",
+        "DELETE FROM `todos` WHERE `id`=?",
         [id]
       );
 
@@ -139,7 +140,7 @@ class ActivitiesController {
 
       return res.status(404).json({
         status: "Not Found",
-        message: `Activity with ID ${id} Not Found`   
+        message: `Todo with ID ${id} Not Found`   
       });
     } catch (error) {
       next(error);
@@ -147,4 +148,4 @@ class ActivitiesController {
   };
 }
 
-export default ActivitiesController;
+export default TodosController;
